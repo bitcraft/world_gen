@@ -13,7 +13,7 @@ import pyscroll
 import pyscroll.data
 from pyscroll.group import PyscrollGroup
 
-import perlin
+from lib import perlin
 
 # define configuration variables here
 RESOURCES_DIR = 'resources'

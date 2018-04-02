@@ -14,8 +14,9 @@ Requires the following:
 * pyscroll
 * pytmx  (not actually used...theres a pyscroll bug this fixes)
 
+**Please update these dependancies if you laready have them installed**
 
-Install them using pip:
+Install/Update them using pip:
 ```
 pip install -U pygame pytmx pyscroll
 ```

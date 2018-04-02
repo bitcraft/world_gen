@@ -14,7 +14,7 @@ Requires the following:
 * pyscroll
 * pytmx  (not actually used...theres a pyscroll bug this fixes)
 
-**Please update these dependancies if you laready have them installed**
+**Please update these dependancies if you already have them installed**
 
 Install/Update them using pip:
 ```

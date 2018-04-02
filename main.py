@@ -17,7 +17,6 @@ from lib import perlin
 
 # define configuration variables here
 RESOURCES_DIR = 'resources'
-
 HERO_MOVE_SPEED = 200  # pixels per second
 
 
@@ -25,11 +24,6 @@ HERO_MOVE_SPEED = 200  # pixels per second
 def init_screen(width, height):
     screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     return screen
-
-
-# make loading maps a little easier
-def get_map(filename):
-    return os.path.join(RESOURCES_DIR, filename)
 
 
 # make loading images a little easier
@@ -84,6 +78,10 @@ class Hero(pygame.sprite.Sprite):
 
 
 class InfiniteMap(pyscroll.PyscrollDataAdapter):
+    """ DataAdapter to allow infinite maps rendered by pyscroll
+
+    Doesn't store map data; tile is chosen deterministically when displayed on screen
+    """
     def __init__(self, tile_size=(32, 32)):
         super(InfiniteMap, self).__init__()
         self.base_tiler = perlin.SimplexNoise()
@@ -92,12 +90,11 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
         self.visible_tile_layers = [1]
         self.all_tiles = list()
         self.tiles = list()
-        self.tile_map = (118, 183, 182, 181)
+        self.tile_map = (118, 183, 182, 181, 373)  # the tiles used on the map
         self.load_texture()
 
     def load_texture(self):
-        filename = os.path.join(RESOURCES_DIR, 'terrain_atlas.png')
-        surface = pygame.image.load(filename).convert_alpha()
+        surface = load_image('terrain_atlas.png').convert_alpha()
         tw, th = 32, 32
         sw, sh = surface.get_size()
 
@@ -111,12 +108,21 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
             self.tiles.append(self.all_tiles[i])
 
     def get_tile_image(self, x, y, l):
+        """ Get a tile for the x, y position
+
+        Uses simplex noise to determine what tile to use
+
+        :param x:
+        :param y:
+        :param l:
+        :return:
+        """
         noise = self.base_tiler.noise2
-        base_value = ((noise(x / 32, y / 32) + 1) / 2) * 3
-        grass_value = ((noise(x, y) + 1) / 2) * 3
-        base_value = (base_value * .7) + (grass_value * .3)
-        value = pow(base_value, .9)
-        tile_id = int(value)
+        base_value = ((noise(x / 32, y / 32) + 1) / 2) * 4
+        base_value = pow(base_value, .9)
+        grass_value = ((noise(x, y) + 1) / 2) * 4
+        final_value = (base_value * .7) + (grass_value * .3)
+        tile_id = int(round(final_value))
         return self.tiles[tile_id]
 
 
@@ -137,20 +143,15 @@ class QuestGame(object):
 
         # create new renderer (camera)
         self.map_layer = pyscroll.BufferedRenderer(map_data, screen.get_size(), clamp_camera=True, tall_sprites=1)
-        self.map_layer.zoom = 2
+        self.map_layer.zoom = 1
 
         # pyscroll supports layered rendering.  our map has 3 'under' layers
         # layers begin with 0, so the layers are 0, 1, and 2.
         # since we want the sprite to be on top of layer 1, we set the default
         # layer for sprites as 2
         self.group = PyscrollGroup(map_layer=self.map_layer, default_layer=2)
-
         self.hero = Hero()
-
-        # put the hero in the center of the map
         self.hero.position = self.map_layer.map_rect.center
-        self.hero._position[0] += 200
-        self.hero._position[1] += 400
 
         # add our hero to the group
         self.group.add(self.hero)

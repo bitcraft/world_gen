@@ -4,7 +4,6 @@ requires pygame and pytmx.
 https://github.com/bitcraft/pytmx
 pip install pytmx
 """
-import os.path
 
 import pygame
 from pygame.locals import *
@@ -13,22 +12,16 @@ import pyscroll
 import pyscroll.data
 from pyscroll.group import PyscrollGroup
 
-from lib import perlin
+from lib.infinitemap import InfiniteMap
+from lib.resources import load_image
 
-# define configuration variables here
-RESOURCES_DIR = 'resources'
 HERO_MOVE_SPEED = 400  # pixels per second
 
 
-# simple wrapper to keep the screen resizeable
 def init_screen(width, height):
+    # simple wrapper to keep the screen resizeable
     screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     return screen
-
-
-# make loading images a little easier
-def load_image(filename):
-    return pygame.image.load(os.path.join(RESOURCES_DIR, filename))
 
 
 class Hero(pygame.sprite.Sprite):
@@ -77,202 +70,6 @@ class Hero(pygame.sprite.Sprite):
         self.feet.midbottom = self.rect.midbottom
 
 
-s_flags = 1, 2, 4, 8
-N, E, S, W = s_flags
-#       NW, N, NE, E, SE, S, SW, W
-s_order = 9, 1, 3, 2, 6, 4, 12, 8
-
-corner_map = {
-    # reject / holes ok
-    126: None,
-    143: None,
-    207: None,
-    227: None,
-    231: None,
-    248: None,
-    252: None,
-
-    # NW corner
-    1: 1,
-
-    # NE corner
-    4: 2,
-
-    # north
-    2: 3,
-    3: 3,
-    5: 3,
-    6: 3,
-    7: 3,
-
-    # SW corner
-    64: 4,
-
-    # west
-    128: 5,
-    129: 5,
-    192: 5,
-    193: 5,
-
-    # north west
-    67: 7,
-    131: 7,
-    133: 7,
-    135: 7,
-    195: 7,
-    199: 7,
-
-    # SE corner
-    16: 8,
-
-    # east
-    8: 10,
-    12: 10,
-    24: 10,
-    28: 10,
-    65: 10,
-
-    # north east
-    14: 11,
-    15: 11,
-    30: 11,
-    31: 11,
-
-    # south
-    32: 12,
-    48: 12,
-    80: 12,
-    96: 12,
-    112: 12,
-
-    # south west
-    224: 13,
-    225: 13,
-    240: 13,
-    241: 13,
-
-    # south east
-    52: 14,
-    56: 14,
-    60: 14,
-    92: 14,
-    120: 14,
-    124: 14,
-}
-
-
-class InfiniteMap(pyscroll.PyscrollDataAdapter):
-    """ DataAdapter to allow infinite maps rendered by pyscroll
-
-    Doesn't store map data; tile is chosen deterministically when displayed on screen
-    """
-
-    def __init__(self, tile_size=(32, 32)):
-        super(InfiniteMap, self).__init__()
-        self.grass_water_dict = dict()
-        self.base_tiler = perlin.SimplexNoise()
-        self.tile_size = tile_size
-        self.map_size = 1024, 1024
-        self.visible_tile_layers = [1]
-        self.all_tiles = list()
-        self.tiles = list()
-        self.tile_map = (118, 183, 182, 181, 373, 391)  # the tiles used on the map
-
-        # grass => water
-        # edges:                   NW,   N,  NE,   E,  SE,   S,  SW,   W
-        self.grass_water_edges = [358, 359, 360, 392, 424, 423, 422, 390]
-
-        self.g_w = [None, 328, 327, 359, 296, 390, None, 358, 295, None, 392, 360, 423, 422, 424, 391]
-
-        self.temp_tiles = dict()
-
-        self.load_texture()
-
-    def surrounding(self, x, y):
-        return [self.temp_tiles.get(i, 0) for i in
-                ((x - 1, y - 1), (x, y - 1), (x + 1, y - 1), (x + 1, y),
-                 (x + 1, y + 1), (x, y + 1), (x - 1, y + 1), (x - 1, y))]
-
-    def load_texture(self):
-        surface = load_image('terrain_atlas.png').convert_alpha()
-        tw, th = 32, 32
-        sw, sh = surface.get_size()
-
-        append = self.all_tiles.append
-        subsurface = surface.subsurface
-        for y in range(0, sh, th):
-            for x in range(0, sw, tw):
-                append(subsurface((x, y, tw, th)))
-
-        for i in self.tile_map:
-            self.tiles.append(self.all_tiles[i])
-
-        for i in self.grass_water_edges:
-            self.tiles.append(self.all_tiles[i])
-
-    def get_tile_image(self, x, y, l):
-        """ Get a tile for the x, y position
-
-        Uses simplex noise to determine what tile to use
-
-        :param x:
-        :param y:
-        :param l:
-        :return:
-        """
-        noise = self.base_tiler.noise2
-
-        # base veg layer
-        grass_value = ((noise(x / 32, y / 32) + 1) / 2) * 4
-        grass_value = pow(grass_value, .9)
-        variation = ((noise(x, y) + 1) / 2) * 4
-        grass_value = (grass_value * .7) + (variation * .3)
-
-        # streams
-        streams = ((noise(x / 32, y / 32) + 1) / 2)
-        if streams > .75:
-            temp = 0
-            print("=" * 20)
-            for i, v in enumerate(self.surrounding(x, y)):
-                if v not in self.g_w:
-                    temp += pow(2, i)
-            print(temp)
-            print("-" * 20)
-
-            try:
-                if temp:
-                    tile_id = self.g_w[corner_map[temp]]
-                else:
-                    tile_id = 391
-
-            except (KeyError, IndexError):
-                print(temp, self.surrounding(x, y))
-                tile_id = 391
-
-            except TypeError:
-                # none means this tile touches an edge, but
-                # the is no special processing for it
-                tile_id = self.tile_map[1]
-
-            self.temp_tiles[(x, y)] = tile_id
-
-            tile = self.all_tiles[tile_id].copy()
-
-            DEBUG_CODES = 1
-            if DEBUG_CODES:
-                tile = tile.copy()
-                text = font.render(str(temp), 0, (0, 0, 0))
-                tile.blit(text, (0, 0))
-
-            return tile
-
-        final_value = grass_value
-        tile_id = int(round(final_value))
-
-        self.temp_tiles[(x, y)] = tile_id
-        return self.tiles[tile_id]
-
-
 class QuestGame(object):
     """ This class is a basic game.
     This class will load resources, create a pyscroll group, a hero object.
@@ -286,10 +83,10 @@ class QuestGame(object):
         self.running = False
 
         # create new data source for pyscroll
-        map_data = InfiniteMap()
+        self.map_data = InfiniteMap()
 
         # create new renderer (camera)
-        self.map_layer = pyscroll.BufferedRenderer(map_data, screen.get_size())
+        self.map_layer = pyscroll.BufferedRenderer(self.map_data, screen.get_size())
         self.map_layer.zoom = 1
 
         # pyscroll supports layered rendering.  our map has 3 'under' layers
@@ -298,7 +95,7 @@ class QuestGame(object):
         # layer for sprites as 2
         self.group = PyscrollGroup(map_layer=self.map_layer, default_layer=2)
         self.hero = Hero()
-        self.hero.position = self.map_layer.map_rect.center
+        self.hero.position = 515 * 32, 554 * 32
 
         # add our hero to the group
         self.group.add(self.hero)
@@ -328,6 +125,7 @@ class QuestGame(object):
                     break
 
                 elif event.key == K_r:
+                    self.map_data._first_draw = True
                     self.map_layer.redraw_tiles(self.map_layer._buffer)
 
                 elif event.key == K_EQUALS:
@@ -393,7 +191,6 @@ class QuestGame(object):
 if __name__ == "__main__":
     pygame.init()
     pygame.font.init()
-    font = pygame.font.Font(pygame.font.get_default_font(), 12)
     screen = init_screen(800, 600)
     pygame.display.set_caption('Quest - An epic journey.')
 

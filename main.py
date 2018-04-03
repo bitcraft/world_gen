@@ -82,7 +82,7 @@ N, E, S, W = s_flags
 #       NW, N, NE, E, SE, S, SW, W
 s_order = 9, 1, 3, 2, 6, 4, 12, 8
 
-fuck_map = {
+corner_map = {
     # reject / holes ok
     126: None,
     143: None,
@@ -241,7 +241,7 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
 
             try:
                 if temp:
-                    tile_id = self.g_w[fuck_map[temp]]
+                    tile_id = self.g_w[corner_map[temp]]
                 else:
                     tile_id = 391
 

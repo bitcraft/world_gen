@@ -178,7 +178,8 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
             self._old_view = view.copy()
             x, y, w, h = view
             for yy, xx in product(range(y - 1, y + h + 1), range(x - 1, x + w + 1)):
-                self.get_tile_value(xx, yy, 0)
+                if (xx, yy) not in self.biome_map:
+                    self.get_tile_value(xx, yy, 0)
 
     def get_tile_image(self, x, y, l):
         """ Get a tile for the x, y position

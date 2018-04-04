@@ -13,7 +13,6 @@ DEBUG_CODES = 0
 
 def get_grass_value(x, y, noise):
     grass_value = ((noise(x / 32, y / 32) + 1) / 2) * 4
-    grass_value = pow(grass_value, .9)
     variation = ((noise(x, y) + 1) / 2) * 4
     return (grass_value * .7) + (variation * .3)
 

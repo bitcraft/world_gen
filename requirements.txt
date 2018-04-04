@@ -1,3 +1,2 @@
 pygame
-pytmx
-pyscroll
+pyscroll>=2.17.8

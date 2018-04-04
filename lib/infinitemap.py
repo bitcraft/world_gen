@@ -1,4 +1,5 @@
 from heapq import heappop, heappush
+from itertools import product
 
 import pygame
 import pyscroll
@@ -29,6 +30,7 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
         self.base_tiler = perlin.SimplexNoise()
 
         # required for pyscroll
+        self._old_view = None
         self.tile_size = tile_size
         self.map_size = 1024, 1024
         self.visible_tile_layers = [1]
@@ -37,17 +39,35 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
         self._first_draw = True
 
         self.tilesets = {
+            'ldirt-empty': (112, 49, 48, 80, 17, 111, None, 79, 16, None, 113, 81, 144, 143, 145, 47),
             'sand-empty': (385, 322, 321, 353, 290, 384, None, 352, 289, None, 386, 354, 417, 416, 418, 320),
             'water-grass': (391, 328, 327, 359, 296, 390, None, 358, 295, None, 392, 360, 423, 422, 424, 326),
             'grass': (118, 183, 182, 181),
+            'wall': (38, None, None, 6, 0, 0, 0, 5, 0, 0, 0, 7, 0, 0, 0, 0),
         }
+
         self.all_tiles = list()
 
         self.value_map = dict()
         self.biome_map = dict()
         self.tile_map = dict()
+        self.elevation_map = dict()
 
         self.load_texture()
+
+        l = list()
+        self.tilesets['sand-grass'] = l
+        base = self.all_tiles[self.tilesets['grass'][0]].copy()
+        i = len(self.all_tiles)
+        for value in self.tilesets['sand-empty']:
+            if value:
+                l.append(i)
+                new_tile = base.copy()
+                new_tile.blit(self.all_tiles[value], (0, 0))
+                self.all_tiles.append(new_tile)
+                i += 1
+            else:
+                l.append(None)
 
     def fill(self, start, bounds, blacklist=set()):
         def cell_available(cell):
@@ -61,19 +81,22 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
         open_heap = list()
         open_set = set()
         closed_set = set()
+
+        closed_set.add(None)
+
         open_set.add(start)
         open_heap.append(start)
+
+        path = list()
 
         while open_set:
             current = heappop(open_heap)
 
             open_set.remove(current)
             closed_set.add(current)
-            cells = self.surrounding8(*current)
+            path.append(current)
 
-            self.get_tile_value(current[0], current[1], 0)
-            if self.biome_map[(current[0], current[1])] == 'water':
-                self.edge_tile(current[0], current[1], 0)
+            cells = self.neighbors(*current)
 
             for cell in cells:
                 if cell in closed_set:
@@ -84,33 +107,21 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
                         open_set.add(cell)
                         heappush(open_heap, cell)
 
+        for cell in path:
+            self.get_tile_value(*cell, 0)
+
         return None, True
 
-    def surrounding4(self, x, y):
-        """ Return the 4 tiles surrounding
-
-        :param x:
-        :param y:
-        :return:
-        """
-        return (x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)
-
-    def surrounding8(self, x, y):
-        """ Return the 8 tiles surrounding
-
-        :param x:
-        :param y:
-        :return:
-        """
+    def neighbors(self, x, y):
         return ((x - 1, y - 1), (x, y - 1), (x + 1, y - 1), (x + 1, y),
                 (x + 1, y + 1), (x, y + 1), (x - 1, y + 1), (x - 1, y))
 
-    def score8(self, x, y):
+    def surrounding8(self, x, y):
         return [self.biome_map.get(i, None) for i in
                 ((x - 1, y - 1), (x, y - 1), (x + 1, y - 1), (x + 1, y),
                  (x + 1, y + 1), (x, y + 1), (x - 1, y + 1), (x - 1, y))]
 
-    def score4(self, x, y):
+    def surrounding4(self, x, y):
         return [self.biome_map.get(i, None) for i in
                 ((x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y))]
 
@@ -123,14 +134,13 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
 
         append = self.all_tiles.append
         subsurface = surface.subsurface
-        for y in range(0, sh, th):
-            for x in range(0, sw, tw):
-                append(subsurface((x, y, tw, th)))
+        for y, x in product(range(0, sh, th), range(0, sw, tw)):
+            append(subsurface((x, y, tw, th)))
 
     def edge_tile(self, x, y, l, primary, secondary, palette):
 
         score = 0
-        for i, v in enumerate(self.score8(x, y)):
+        for i, v in enumerate(self.surrounding8(x, y)):
             if v is None:
                 pass
 
@@ -141,15 +151,9 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
             elif v == secondary:
                 score += pow(2, i)
 
-        # tile_type = standard8.get(score)
-        # tile_type = standard4[score]
-        tile_type = standard8.get(score)
-
-        if tile_type is None:
-            # todo, better picking of tiles for pockets
-            tile_id = palette[0]
-        else:
-            tile_id = palette[tile_type]
+        # tile_type = standard4.get(score, 0)
+        tile_type = standard8.get(score, 0)
+        tile_id = palette[tile_type]
 
         if DEBUG_CODES:
             tile = self.all_tiles[tile_id].copy()
@@ -166,7 +170,15 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
         streams = ((noise(x / 32, y / 32) + 1) / 2)
         grass_value = get_grass_value(x, y, noise)
 
-        if streams > .75:
+        noise = self.base_tiler.noise2
+        elevation = ((noise(x / 2048, y / 1024) + 1) / 2)
+
+        if elevation > .999999:
+            self.biome_map[(x, y)] = 'wall'
+            self.value_map[(x, y)] = 1
+            self.tile_map[(x, y)] = 0
+
+        elif streams > .75:
             self.biome_map[(x, y)] = 'water'
             self.value_map[(x, y)] = 1
             self.tile_map[(x, y)] = 0
@@ -175,6 +187,13 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
             self.biome_map[(x, y)] = 'grass'
             self.value_map[(x, y)] = grass_value
             self.tile_map[(x, y)] = self.tilesets['grass'][int(round(grass_value))]
+
+    def prepare_tiles(self, view):
+        if not view == self._old_view:
+            self._old_view = view.copy()
+            x, y, w, h = view
+            for yy, xx in product(range(y - 1, y + h + 1), range(x - 1, x + w + 1)):
+                self.get_tile_value(xx, yy, 0)
 
     def get_tile_image(self, x, y, l):
         """ Get a tile for the x, y position
@@ -188,12 +207,16 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
         """
         # if self._first_draw:
         #     self._first_draw = False
-        #     bounds = x, y, x + 30, y + 30
+        #     bounds = x, y, x + 60, y + 60
         #     self.fill((x, y), bounds)
+        biome = self.biome_map[(x, y)]
 
-        self.get_tile_value(x, y, l)
-        if self.biome_map[(x, y)] == 'water':
+        if biome == 'water':
             palette = self.tilesets['water-grass']
+            self.edge_tile(x, y, l, 'water', 'grass', palette)
+
+        elif biome == 'wall':
+            palette = self.tilesets['sand-grass']
             self.edge_tile(x, y, l, 'water', 'grass', palette)
 
         tile_id = self.tile_map.get((x, y), None)

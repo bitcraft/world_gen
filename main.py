@@ -4,6 +4,7 @@ requires pygame and pytmx.
 https://github.com/bitcraft/pytmx
 pip install pytmx
 """
+import math
 
 import pygame
 from pygame.locals import *
@@ -12,10 +13,11 @@ import pyscroll
 import pyscroll.data
 from pyscroll.group import PyscrollGroup
 
+from lib.perlin import SimplexNoise
 from lib.infinitemap import InfiniteMap
 from lib.resources import load_image
 
-HERO_MOVE_SPEED = 400  # pixels per second
+HERO_MOVE_SPEED = 300  # pixels per second
 
 
 def init_screen(width, height):
@@ -174,6 +176,9 @@ class QuestGame(object):
         from collections import deque
         times = deque(maxlen=30)
 
+        noise = SimplexNoise().noise2
+        two_pi = 2 * math.pi
+
         try:
             while self.running:
                 dt = clock.tick(120) / 1000.
@@ -182,6 +187,19 @@ class QuestGame(object):
                 self.handle_input()
                 self.update(dt)
                 self.draw(screen)
+
+                # xx, yy = self.hero.position
+                #
+                # xx /= 1000
+                # yy /= 1000
+                #
+                # for y in range(0, 320, 32):
+                #     for x in range(0, 320, 32):
+                #         v = (noise(xx + x / 1000, yy + y / 1000) + 1) * 128
+                #         color = v, v, v
+                #         print(color)
+                #         screen.fill(color, (x, y, 32, 32))
+
                 pygame.display.flip()
 
         except KeyboardInterrupt:

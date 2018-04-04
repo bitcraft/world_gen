@@ -6,7 +6,7 @@ import pyscroll
 
 from lib import perlin
 from lib.resources import load_image
-from lib.rules import standard8, standard4
+from lib.rules import standard8
 
 DEBUG_CODES = 0
 
@@ -53,20 +53,6 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
         self.elevation_map = dict()
 
         self.load_texture()
-
-        l = list()
-        self.tilesets['sand-grass'] = l
-        base = self.all_tiles[self.tilesets['grass'][0]].copy()
-        i = len(self.all_tiles)
-        for value in self.tilesets['sand-empty']:
-            if value:
-                l.append(i)
-                new_tile = base.copy()
-                new_tile.blit(self.all_tiles[value], (0, 0))
-                self.all_tiles.append(new_tile)
-                i += 1
-            else:
-                l.append(None)
 
     def fill(self, start, bounds, blacklist=set()):
         def cell_available(cell):
@@ -212,10 +198,6 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
 
         if biome == 'water':
             palette = self.tilesets['water-grass']
-            self.edge_tile(x, y, l, 'water', 'grass', palette)
-
-        elif biome == 'wall':
-            palette = self.tilesets['sand-grass']
             self.edge_tile(x, y, l, 'water', 'grass', palette)
 
         tile_id = self.tile_map.get((x, y), None)

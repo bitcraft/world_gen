@@ -5,6 +5,7 @@ https://github.com/bitcraft/pytmx
 pip install pytmx
 """
 import math
+from time import time
 
 import pygame
 from pygame.locals import *
@@ -97,7 +98,7 @@ class QuestGame(object):
         # layer for sprites as 2
         self.group = PyscrollGroup(map_layer=self.map_layer, default_layer=2)
         self.hero = Hero()
-        self.hero.position = 515 * 32, 554 * 32
+        self.hero.position = 518 * 32, 560 * 32
 
         # add our hero to the group
         self.group.add(self.hero)
@@ -174,7 +175,7 @@ class QuestGame(object):
         self.running = True
 
         from collections import deque
-        times = deque(maxlen=30)
+        times = deque(maxlen=300)
 
         noise = SimplexNoise().noise2
         two_pi = 2 * math.pi
@@ -182,12 +183,15 @@ class QuestGame(object):
         try:
             while self.running:
                 dt = clock.tick(60) / 1000.
-                times.append(clock.get_fps())
 
                 self.handle_input()
                 self.update(dt)
-                self.draw(screen)
 
+                begin = time()
+                self.draw(screen)
+                times.append(time() - begin)
+
+                print(len(times), round(sum(times) / len(times), 3))
                 # xx, yy = self.hero.position
                 #
                 # xx /= 1000
@@ -209,7 +213,7 @@ class QuestGame(object):
 if __name__ == "__main__":
     pygame.init()
     pygame.font.init()
-    screen = init_screen(800, 600)
+    screen = init_screen(1024, 1024)
     pygame.display.set_caption('Quest - An epic journey.')
 
     try:

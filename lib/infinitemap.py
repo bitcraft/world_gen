@@ -87,7 +87,7 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
 
         self._old_view = None
         self.seen_tiles = set()
-        #self.load_texture()
+        self.load_texture()
 
     def load_texture(self):
         self.font = pygame.font.Font(None, 18)

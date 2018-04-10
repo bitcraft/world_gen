@@ -129,6 +129,7 @@ class QuestGame(object):
 
                 elif event.key == K_r:
                     self.map_data._first_draw = True
+                    self.map_data.reload()
                     self.map_layer.redraw_tiles(self.map_layer._buffer)
 
                 elif event.key == K_EQUALS:
@@ -180,9 +181,11 @@ class QuestGame(object):
         noise = SimplexNoise().noise2
         two_pi = 2 * math.pi
 
+        poll = 1
+
         try:
             while self.running:
-                dt = clock.tick(60) / 1000.
+                dt = clock.tick() / 1000.
 
                 self.handle_input()
                 self.update(dt)
@@ -191,7 +194,16 @@ class QuestGame(object):
                 self.draw(screen)
                 times.append(time() - begin)
 
-                print(len(times), round(sum(times) / len(times), 3))
+                if len(times) > 0:
+                    print(len(times), round(sum(times) / len(times), 4))
+
+                #
+                # poll -= dt
+                # if poll < 0:
+                #     self.map_data._first_draw = True
+                #     self.map_data.reload()
+                #     self.map_layer.redraw_tiles(self.map_layer._buffer)
+
                 # xx, yy = self.hero.position
                 #
                 # xx /= 1000

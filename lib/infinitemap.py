@@ -174,10 +174,17 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
         if not view == self._old_view:
             self._old_view = view.copy()
             x, y, w, h = view
+            seen_tiles = self.seen_tiles
+            seen_add = seen_tiles.add
+            seen_pop = seen_tiles.pop
+            get_tile_value = self.get_tile_value
+
             for yy, xx in product(range(y - 1, y + h + 1), range(x - 1, x + w + 1)):
-                if (xx, yy) not in self.seen_tiles:
-                    self.seen_tiles.add((xx, yy))
-                    self.get_tile_value(xx, yy, 0)
+                if (xx, yy) not in seen_tiles:
+                    if len(seen_tiles) > 1024:
+                        seen_pop()
+                    seen_add((xx, yy))
+                    get_tile_value(xx, yy, 0)
 
     def set_biome(self, x, y):
         biome = self.biome_map[y][x]

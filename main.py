@@ -131,6 +131,18 @@ class QuestGame(object):
                     self.map_data.reload()
                     self.map_layer.redraw_tiles(self.map_layer._buffer)
 
+                elif event.key == K_q:
+                    self.map_data.NOISE_SIZE -= .5
+                    self.hero.position = self.hero.position[0] * .985, self.hero.position[1] * .985
+                    self.map_data.reload()
+                    self.map_layer.redraw_tiles(self.map_layer._buffer)
+
+                elif event.key == K_w:
+                    self.map_data.NOISE_SIZE += .5
+                    self.map_data.reload()
+                    self.hero.position = self.hero.position[0] * 1.015, self.hero.position[1] * 1.015
+                    self.map_layer.redraw_tiles(self.map_layer._buffer)
+
                 elif event.key == K_EQUALS:
                     self.map_layer.zoom += .25
 

@@ -10,8 +10,6 @@ import lib.rules as lib_rules
 
 DEBUG_CODES = 0
 
-NOISE_SIZE = 32
-
 GRASS = 1
 LDIRT = 2
 WATER = 4
@@ -19,12 +17,6 @@ WALL = 8
 
 POWERS9 = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 POWERS3 = [64, 128, 256]
-
-
-def get_grass_value(x, y, noise):
-    grass_value = ((noise(x / NOISE_SIZE, y / NOISE_SIZE) + 1) / 2) * 4
-    variation = ((noise(x, y) + 1) / 2) * 4
-    return (grass_value * .7) + (variation * .3)
 
 
 class InfiniteMap(pyscroll.PyscrollDataAdapter):
@@ -35,6 +27,7 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
 
     def __init__(self, tile_size=(32, 32)):
         super(InfiniteMap, self).__init__()
+        self.NOISE_SIZE = 32
         self.base_tiler = perlin.SimplexNoise()
 
         # required for pyscroll
@@ -67,6 +60,12 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
 
         self.load_texture()
 
+    def get_grass_value(self, x, y):
+        noise = self.base_tiler.noise2
+        grass_value = ((noise(x / self.NOISE_SIZE, y / self.NOISE_SIZE) + 1) / 2) * 4
+        variation = ((noise(x, y) + 1) / 2) * 4
+        return (grass_value * .7) + (variation * .3)
+
     def score3(self, x, y, secondary):
         # top, center, bottom tiles
         tiles = [self.biome_map[y][x] for x, y in ((x, y - 1), (x, y), (x, y + 1))]
@@ -86,7 +85,9 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
         except AttributeError:
             pass
 
-        self.load_texture()
+        self._old_view = None
+        self.seen_tiles = set()
+        #self.load_texture()
 
     def load_texture(self):
         self.font = pygame.font.Font(None, 18)
@@ -150,8 +151,8 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
 
     def get_tile_value(self, x, y, l):
         noise = self.base_tiler.noise2
-        streams = ((noise(x / NOISE_SIZE, y / NOISE_SIZE) + 1) / 2)
-        grass_value = get_grass_value(x, y, noise)
+        streams = ((noise(x / self.NOISE_SIZE, y / self.NOISE_SIZE) + 1) / 2)
+        grass_value = self.get_grass_value(x, y)
 
         # elevation = round(((noise(x / 46, y / 32) + 1) / 2) * 4) / 4
         elevation = 0

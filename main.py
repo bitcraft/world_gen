@@ -128,7 +128,6 @@ class QuestGame(object):
                     break
 
                 elif event.key == K_r:
-                    self.map_data._first_draw = True
                     self.map_data.reload()
                     self.map_layer.redraw_tiles(self.map_layer._buffer)
 
@@ -194,8 +193,8 @@ class QuestGame(object):
                 self.draw(screen)
                 times.append(time() - begin)
 
-                if len(times) > 0:
-                    print(len(times), round(sum(times) / len(times), 4))
+                # if len(times) > 0:
+                #     print(len(times), round(sum(times) / len(times), 4))
 
                 #
                 # poll -= dt

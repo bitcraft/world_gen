@@ -196,7 +196,7 @@ class QuestGame(object):
 
         try:
             while self.running:
-                dt = clock.tick() / 1000.
+                dt = clock.tick_busy_loop(60) / 1000.
 
                 self.handle_input()
                 self.update(dt)

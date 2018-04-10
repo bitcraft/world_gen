@@ -1,4 +1,3 @@
-from heapq import heappop, heappush
 from itertools import product
 from array import array
 
@@ -178,12 +177,6 @@ class InfiniteMap(pyscroll.PyscrollDataAdapter):
                 if (xx, yy) not in self.seen_tiles:
                     self.seen_tiles.add((xx, yy))
                     self.get_tile_value(xx, yy, 0)
-
-            # for yy, in self.biome_map[y:h + 1]:
-            #     for biome in yy[x:w + 1]:
-
-        # if self.total_checks:
-        #     print(self.total_checks, self.cached_checks, round((self.cached_checks / self.total_checks * 100), 2))
 
     def set_biome(self, x, y):
         biome = self.biome_map[y][x]

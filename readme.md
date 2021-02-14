@@ -13,8 +13,6 @@ For example, the borders between water and grass use the correct tiles.
 
 The world map is deterministic and infinite.
 
-This is likely to be very slow right now.
-
 #### Requirements
 
 Requires the following:
